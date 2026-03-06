@@ -50,7 +50,7 @@ args.device = set_device()
 
 wandb_login = False
 try:
-    wandb_login = wandb.login(key = open(f"{args.data_dir}/wandb_key.txt", 'r').readline())
+    wandb_login = wandb.login(key = open(f"{args.key_dir}/wandb_key.txt", 'r').readline())
 except:
     pass
 if wandb_login:
