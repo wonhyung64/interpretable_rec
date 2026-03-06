@@ -128,29 +128,6 @@ experiments=(
     "baseline.py --base-model=mf --lr=1e-4 --embedding-k=64 --weight-decay=1e-6"
 
 
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.2 --recdim=16"
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.4 --recdim=16"
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.5 --recdim=16"
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.6 --recdim=16"
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.8 --recdim=16"
-
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.2 --recdim=64"
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.4 --recdim=64"
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.5 --recdim=64"
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.6 --recdim=64"
-#     "expt13_share_nonlin_vallamb_idecay.py --lr=1e-3 --lambda1=0.8 --recdim=64"
-
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.2 --recdim=16"
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.4 --recdim=16"
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.5 --recdim=16"
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.6 --recdim=16"
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.8 --recdim=16"
-
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.2 --recdim=64"
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.4 --recdim=64"
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.5 --recdim=64"
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.6 --recdim=64"
-#     "expt14_share_nonlin_vallamb_idecaynonlin.py --lr=1e-3 --lambda1=0.8 --recdim=64"
 )
 
 
