@@ -109,26 +109,57 @@ pair_df.to_csv(f"{data_dir}/pair_count.csv")
 
 
 #%%
-df = rating_df.sort_values(["userId", "timestamp"]).reset_index(drop=True).copy()
-df["rating"][df["rating"] < 3] = 0
-df["rating"][df["rating"] >= 3] = 1
+
+df = rating_df.sort_values(["timestamp", "userId", "movieId"]).reset_index(drop=True).copy()
+
+# binary implicit feedback
+df.loc[df["rating"] < 3, "rating"] = 0
+df.loc[df["rating"] >= 3, "rating"] = 1
+
 df.columns = ["userId", "movieId", "interaction", "timestamp"]
 df["interaction"] = df["interaction"].astype(int)
-df["rank_from_last"] = df.groupby("userId").cumcount(ascending=False) + 1
 
-test_df = df[df["rank_from_last"] == 1].copy()
-val_df  = df[df["rank_from_last"] == 2].copy()
-train_df = df[df["rank_from_last"] > 2].copy()
+n_total = len(df)
+train_end = int(n_total * 0.8)
+val_end = int(n_total * 0.9)
 
-train_df = train_df.drop(columns=["rank_from_last"])
-val_df = val_df.drop(columns=["rank_from_last"])
-test_df = test_df.drop(columns=["rank_from_last"])
+train_df = df.iloc[:train_end].copy()
+val_df   = df.iloc[train_end:val_end].copy()
+test_df  = df.iloc[val_end:].copy()
 
-np.save(f"{data_dir}/train.npy", train_df.to_numpy(), allow_pickle=True)
-np.save(f"{data_dir}/val.npy", val_df.to_numpy(), allow_pickle=True)
-np.save(f"{data_dir}/test.npy", test_df.to_numpy(), allow_pickle=True)
+# remove cold users/items from val/test
+train_users = set(train_df["userId"].unique())
+train_items = set(train_df["movieId"].unique())
 
+val_df = val_df[
+    val_df["userId"].isin(train_users) &
+    val_df["movieId"].isin(train_items)
+].copy()
 
+# test also should only contain users/items seen in train (+ optionally val)
+seen_users = train_users | set(val_df["userId"].unique())
+seen_items = train_items | set(val_df["movieId"].unique())
+
+test_df = test_df[
+    test_df["userId"].isin(seen_users) &
+    test_df["movieId"].isin(seen_items)
+].copy()
+
+# sort back by user-time if your downstream code expects per-user chronological order
+train_df = train_df.sort_values(["userId", "timestamp", "movieId"]).reset_index(drop=True)
+val_df   = val_df.sort_values(["userId", "timestamp", "movieId"]).reset_index(drop=True)
+test_df  = test_df.sort_values(["userId", "timestamp", "movieId"]).reset_index(drop=True)
+
+print(f"train: {len(train_df)}")
+print(f"val:   {len(val_df)}")
+print(f"test:  {len(test_df)}")
+
+print(f"#users train/val/test: {train_df['userId'].nunique()} / {val_df['userId'].nunique()} / {test_df['userId'].nunique()}")
+print(f"#items train/val/test: {train_df['movieId'].nunique()} / {val_df['movieId'].nunique()} / {test_df['movieId'].nunique()}")
+
+np.save(f"{data_dir}/train.npy", train_df[["userId", "movieId", "interaction", "timestamp"]].to_numpy(), allow_pickle=True)
+np.save(f"{data_dir}/val.npy", val_df[["userId", "movieId", "interaction", "timestamp"]].to_numpy(), allow_pickle=True)
+np.save(f"{data_dir}/test.npy", test_df[["userId", "movieId", "interaction", "timestamp"]].to_numpy(), allow_pickle=True)
 
 
 # %%
