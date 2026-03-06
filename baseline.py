@@ -167,28 +167,55 @@ for epoch in range(1, args.num_epochs+1):
 
 
     if epoch % args.evaluate_interval == 0:
+
+        model.eval()
+        x_valid_tensor = torch.LongTensor(x_valid).to(args.device)
+        pred_, _, __ = model(x_valid_tensor)
+        pred = pred_.flatten().cpu().detach().numpy()
+
+
+        ndcg_res = ndcg_func(pred, x_valid, y_valid, args.top_k_list)
+        ndcg_dict: dict = {}
+        for top_k in args.top_k_list:
+            ndcg_dict[f"valid_ndcg_{top_k}"] = np.mean(ndcg_res[f"ndcg_{top_k}"])
+
+        recall_res = recall_func(pred, x_valid, y_valid, args.top_k_list)
+        recall_dict: dict = {}
+        for top_k in args.top_k_list:
+            recall_dict[f"valid_recall_{top_k}"] = np.mean(recall_res[f"recall_{top_k}"])
+
+        ap_res = ap_func(pred, x_valid, y_valid, args.top_k_list)
+        ap_dict: dict = {}
+        for top_k in args.top_k_list:
+            ap_dict[f"valid_ap_{top_k}"] = np.mean(ap_res[f"ap_{top_k}"])
+
+        valid_auc = roc_auc_score(y_valid, pred)
+
+        print(f"valid_NDCG: {ndcg_dict}")
+        print(f"valid_Recall: {recall_dict}")
+        print(f"valid_AP: {ap_dict}")
+        print(f"valid_AUC: {auc}")
+
         model.eval()
         x_test_tensor = torch.LongTensor(x_test).to(args.device)
         pred_, _, __ = model(x_test_tensor)
         pred = pred_.flatten().cpu().detach().numpy()
 
-
         ndcg_res = ndcg_func(pred, x_test, y_test, args.top_k_list)
-        ndcg_dict: dict = {}
         for top_k in args.top_k_list:
-            ndcg_dict[f"ndcg_{top_k}"] = np.mean(ndcg_res[f"ndcg_{top_k}"])
+            ndcg_dict[f"test_ndcg_{top_k}"] = np.mean(ndcg_res[f"ndcg_{top_k}"])
 
         recall_res = recall_func(pred, x_test, y_test, args.top_k_list)
         recall_dict: dict = {}
         for top_k in args.top_k_list:
-            recall_dict[f"recall_{top_k}"] = np.mean(recall_res[f"recall_{top_k}"])
+            recall_dict[f"test_recall_{top_k}"] = np.mean(recall_res[f"recall_{top_k}"])
 
         ap_res = ap_func(pred, x_test, y_test, args.top_k_list)
         ap_dict: dict = {}
         for top_k in args.top_k_list:
-            ap_dict[f"ap_{top_k}"] = np.mean(ap_res[f"ap_{top_k}"])
+            ap_dict[f"test_ap_{top_k}"] = np.mean(ap_res[f"ap_{top_k}"])
 
-        auc = roc_auc_score(y_test, pred)
+        test_auc = roc_auc_score(y_test, pred)
 
 
         print(f"NDCG: {ndcg_dict}")
@@ -201,7 +228,8 @@ for epoch in range(1, args.num_epochs+1):
             wandb_var.log(ndcg_dict)
             wandb_var.log(recall_dict)
             wandb_var.log(ap_dict)
-            wandb_var.log({"auc": auc})
+            wandb_var.log({"valid_auc": valid_auc})
+            wandb_var.log({"test_auc": test_auc})
 
 
 if wandb_login:
