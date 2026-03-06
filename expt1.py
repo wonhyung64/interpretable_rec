@@ -11,6 +11,9 @@ import torch.nn as nn
 import scipy.sparse as sps
 from datetime import datetime
 from sklearn.metrics import roc_auc_score
+from module.utils import set_device, set_seed
+from module.model import ConceptMF
+from module.metric import ndcg_func, recall_func, ap_func
 
 try:
     import wandb
@@ -138,7 +141,7 @@ for epoch in range(1, args.num_epochs+1):
         print(f"valid_NDCG: {ndcg_dict}")
         print(f"valid_Recall: {recall_dict}")
         print(f"valid_AP: {ap_dict}")
-        print(f"valid_AUC: {auc}")
+        print(f"valid_AUC: {valid_auc}")
 
         model.eval()
         x_test_tensor = torch.LongTensor(x_test).to(args.device)
@@ -165,7 +168,7 @@ for epoch in range(1, args.num_epochs+1):
         print(f"NDCG: {ndcg_dict}")
         print(f"Recall: {recall_dict}")
         print(f"AP: {ap_dict}")
-        print(f"AUC: {auc}")
+        print(f"AUC: {test_auc}")
 
 
         if wandb_login:
