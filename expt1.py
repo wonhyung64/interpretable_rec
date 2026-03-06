@@ -54,7 +54,7 @@ try:
 except:
     pass
 if wandb_login:
-    args.expt_name = f"concept_mf_{expt_num}"
+    args.expt_name = f"concept_mf_{args.expt_num}"
     wandb_var = wandb.init(project="interpretable_rec", config=vars(args))
     wandb.run.name = args.expt_name
 

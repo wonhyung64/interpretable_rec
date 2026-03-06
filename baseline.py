@@ -105,7 +105,7 @@ try:
 except:
     pass
 if wandb_login:
-    args.expt_name = f"{args.base_model}_{expt_num}"
+    args.expt_name = f"{args.base_model}_{args.expt_num}"
     wandb_var = wandb.init(project="interpretable_rec", config=vars(args))
     wandb.run.name = args.expt_name
 
