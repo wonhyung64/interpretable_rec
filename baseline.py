@@ -20,6 +20,58 @@ except:
     import wandb
 
 
+class MF(nn.Module):
+    """
+    Matrix Factorization
+    """
+    def __init__(self, num_users:int, num_items:int, embedding_k:int):
+        super(MF, self).__init__()
+        self.num_users = num_users
+        self.num_items = num_items
+        self.embedding_k = embedding_k
+        self.user_embedding = nn.Embedding(self.num_users, self.embedding_k)
+        self.item_embedding = nn.Embedding(self.num_items, self.embedding_k)
+
+    def forward(self, x):
+        user_idx = x[:,0]
+        item_idx = x[:,1]
+        user_embed = self.user_embedding(user_idx)
+        item_embed = self.item_embedding(item_idx)
+        out = torch.sum(user_embed.mul(item_embed), 1).unsqueeze(-1)
+        return out, user_embed, item_embed
+
+
+class NCF(nn.Module):
+    """
+    Neural Collaborative Filtering
+    """
+    def __init__(self, num_users:int, num_items:int, embedding_k:int, depth:int=0):
+        super(NCF, self).__init__()
+        self.num_users = num_users
+        self.num_items = num_items
+        self.embedding_k = embedding_k
+        self.depth = depth
+        self.user_embedding = nn.Embedding(self.num_users, self.embedding_k)
+        self.item_embedding = nn.Embedding(self.num_items, self.embedding_k)
+        layers_y1 = [nn.Linear(self.embedding_k*2, self.embedding_k), nn.ReLU()]
+        for _ in range(self.depth):
+            layers_y1.append(nn.Linear(self.embedding_k, self.embedding_k))
+            layers_y1.append(nn.ReLU())
+        layers_y1.append(nn.Linear(self.embedding_k, 1, bias=False))
+        self.y1 = nn.Sequential(*layers_y1)
+
+    def forward(self, x):
+        user_idx = x[:,0]
+        item_idx = x[:,1]
+        user_embed = self.user_embedding(user_idx)
+        item_embed = self.item_embedding(item_idx)
+        z_embed = torch.cat([user_embed, item_embed], axis=1)
+        out = self.y1(z_embed)
+        return out, user_embed, item_embed
+
+
+
+
 #%%
 parser = argparse.ArgumentParser()
 parser.add_argument("--embedding-k", type=int, default=64)
@@ -32,6 +84,7 @@ parser.add_argument("--random-seed", type=int, default=0)
 parser.add_argument("--evaluate-interval", type=int, default=50)
 parser.add_argument("--top-k-list", type=list, default=[1,3,5,7,10])
 parser.add_argument("--data-dir", type=str, default="./data")
+parser.add_argument("--base-model", type=str, default="ncf")
 parser.add_argument("--depth", type=int, default=0)
 parser.add_argument("--key-dir", type=str, default="./")
 try:
@@ -43,7 +96,6 @@ except:
 args.expt_num = f'{datetime.now().strftime("%y%m%d_%H%M%S_%f")}'
 set_seed(args.random_seed)
 args.device = set_device()
-# args.data_dir = "/gpfs/home1/wonhyung64/Github/interpretable_rec/data"
 
 wandb_login = False
 try:
@@ -51,7 +103,7 @@ try:
 except:
     pass
 if wandb_login:
-    args.expt_name = f"concept_mf_{expt_num}"
+    args.expt_name = f"{args.base_model}_{expt_num}"
     wandb_var = wandb.init(project="interpretable_rec", config=vars(args))
     wandb.run.name = args.expt_name
 
@@ -81,7 +133,11 @@ total_batch = num_samples // args.batch_size + 1
 
 
 #%%
-model = ConceptMF(num_users, num_items, args.embedding_k, tag2items)
+if args.base_model == "ncf":
+    model = NCF(num_users, num_items, args.embedding_k, depth=args.depth)
+elif args.base_model == "mf":
+    model = MF(num_users, num_items, args.embedding_k)
+
 model = model.to(args.device)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 loss_fcn = torch.nn.BCEWithLogitsLoss()
@@ -98,8 +154,8 @@ for epoch in range(1, args.num_epochs+1):
         sub_x = torch.LongTensor(x_train[selected_idx]).to(args.device)
         sub_y = torch.FloatTensor(y_train[selected_idx]).to(args.device)
 
-        pred, user_embed, item_concept = model(sub_x)
-        loss = loss_fcn(pred, sub_y)
+        pred, _, __ = model(sub_x)
+        loss = loss_fcn(pred, sub_y.unsqueeze(-1))
 
         optimizer.zero_grad()
         loss.backward()
