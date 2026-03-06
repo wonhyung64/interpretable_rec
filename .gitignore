@@ -19,5 +19,5 @@ bin-release/
 .DS_Store
 data
 wandb
-# __pycache__
+__pycache__
 wandb_key.txt
