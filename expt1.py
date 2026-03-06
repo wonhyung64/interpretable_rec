@@ -153,12 +153,10 @@ for epoch in range(1, args.num_epochs+1):
             ndcg_dict[f"test_ndcg_{top_k}"] = np.mean(ndcg_res[f"ndcg_{top_k}"])
 
         recall_res = recall_func(pred, x_test, y_test, args.top_k_list)
-        recall_dict: dict = {}
         for top_k in args.top_k_list:
             recall_dict[f"test_recall_{top_k}"] = np.mean(recall_res[f"recall_{top_k}"])
 
         ap_res = ap_func(pred, x_test, y_test, args.top_k_list)
-        ap_dict: dict = {}
         for top_k in args.top_k_list:
             ap_dict[f"test_ap_{top_k}"] = np.mean(ap_res[f"ap_{top_k}"])
 
