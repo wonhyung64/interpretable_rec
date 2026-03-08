@@ -30,6 +30,7 @@ def normalize_tag(tag):
 
 #%% LOADING
 data_dir = "./data/ml-latest-small"
+data_dir = "./data/ml-32m"
 link_df = pd.read_csv(f"{data_dir}/links.csv")
 movie_df = pd.read_csv(f"{data_dir}/movies.csv")
 rating_df = pd.read_csv(f"{data_dir}/ratings.csv")

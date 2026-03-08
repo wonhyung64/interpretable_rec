@@ -54,78 +54,77 @@ RANDOM_SEED=0
 
 experiments=(
 
-    "expt1.py --lr=1e-3 --embedding-k=16 --weight-decay=1e-4"
-    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=16 --weight-decay=1e-4"
-    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=16 --weight-decay=1e-4"
+    "expt1.py --lr=1e-3 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-3 --embedding-k=64 --weight-decay=1e-4"
-    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=64 --weight-decay=1e-4"
-    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=64 --weight-decay=1e-4"
+    "expt1.py --lr=1e-3 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-5 --embedding-k=16 --weight-decay=1e-4"
-    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=16 --weight-decay=1e-4"
-    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=16 --weight-decay=1e-4"
+    "expt1.py --lr=1e-5 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-5 --embedding-k=64 --weight-decay=1e-4"
-    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=64 --weight-decay=1e-4"
-    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=64 --weight-decay=1e-4"
+    "expt1.py --lr=1e-5 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-4 --embedding-k=16 --weight-decay=1e-4"
-    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=16 --weight-decay=1e-4"
-    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=16 --weight-decay=1e-4"
+    "expt1.py --lr=1e-4 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=16 --weight-decay=1e-4 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-4 --embedding-k=64 --weight-decay=1e-4"
-    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=64 --weight-decay=1e-4"
-    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=64 --weight-decay=1e-4"
+    "expt1.py --lr=1e-4 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=64 --weight-decay=1e-4 --dataset-name=ml-32m"
 
-#
-    "expt1.py --lr=1e-3 --embedding-k=16 --weight-decay=1e-5"
-    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=16 --weight-decay=1e-5"
-    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=16 --weight-decay=1e-5"
+    "expt1.py --lr=1e-3 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-3 --embedding-k=64 --weight-decay=1e-5"
-    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=64 --weight-decay=1e-5"
-    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=64 --weight-decay=1e-5"
+    "expt1.py --lr=1e-3 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-5 --embedding-k=16 --weight-decay=1e-5"
-    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=16 --weight-decay=1e-5"
-    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=16 --weight-decay=1e-5"
+    "expt1.py --lr=1e-5 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-5 --embedding-k=64 --weight-decay=1e-5"
-    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=64 --weight-decay=1e-5"
-    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=64 --weight-decay=1e-5"
+    "expt1.py --lr=1e-5 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-4 --embedding-k=16 --weight-decay=1e-5"
-    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=16 --weight-decay=1e-5"
-    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=16 --weight-decay=1e-5"
+    "expt1.py --lr=1e-4 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=16 --weight-decay=1e-5 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-4 --embedding-k=64 --weight-decay=1e-5"
-    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=64 --weight-decay=1e-5"
-    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=64 --weight-decay=1e-5"
-#
-    "expt1.py --lr=1e-3 --embedding-k=16 --weight-decay=1e-6"
-    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=16 --weight-decay=1e-6"
-    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=16 --weight-decay=1e-6"
+    "expt1.py --lr=1e-4 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=64 --weight-decay=1e-5 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-3 --embedding-k=64 --weight-decay=1e-6"
-    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=64 --weight-decay=1e-6"
-    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=64 --weight-decay=1e-6"
+    "expt1.py --lr=1e-3 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-5 --embedding-k=16 --weight-decay=1e-6"
-    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=16 --weight-decay=1e-6"
-    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=16 --weight-decay=1e-6"
+    "expt1.py --lr=1e-3 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-3 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-3 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-5 --embedding-k=64 --weight-decay=1e-6"
-    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=64 --weight-decay=1e-6"
-    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=64 --weight-decay=1e-6"
+    "expt1.py --lr=1e-5 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-4 --embedding-k=16 --weight-decay=1e-6"
-    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=16 --weight-decay=1e-6"
-    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=16 --weight-decay=1e-6"
+    "expt1.py --lr=1e-5 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-5 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-5 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
 
-    "expt1.py --lr=1e-4 --embedding-k=64 --weight-decay=1e-6"
-    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=64 --weight-decay=1e-6"
-    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=64 --weight-decay=1e-6"
+    "expt1.py --lr=1e-4 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=16 --weight-decay=1e-6 --dataset-name=ml-32m"
+
+    "expt1.py --lr=1e-4 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=ncf --lr=1e-4 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
+    "baseline.py --base-model=mf --lr=1e-4 --embedding-k=64 --weight-decay=1e-6 --dataset-name=ml-32m"
 
 
 )
