@@ -21,3 +21,4 @@ data
 wandb
 __pycache__
 wandb_key.txt
+logs

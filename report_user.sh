@@ -6,7 +6,7 @@ read -r -d '' SLURM_SCRIPT<<'EOF'
 #SBATCH --ntasks-per-node=4
 #SBATCH --partition=gpu5,gpu3,gpu4,gpu2,gpu6,gpu1
 ##
-#SBATCH --job-name=JointRec
+#SBATCH --job-name=InterpretableRec
 #SBATCH -o logs/s_%j.out
 #SBATCH -e logs/s_%j.err
 ##
