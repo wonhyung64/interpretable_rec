@@ -70,9 +70,20 @@ x_train, y_train = x_train[:,:-2], x_train[:,-2]
 x_valid, y_valid = x_valid[:,:-2], x_valid[:,-2]
 x_test, y_test = x_test[:,:-2], x_test[:,-2]
 
-num_users = x_train[:,0].max() + 1
-num_items = x_train[:,1].max() + 1
+with open(f"{args.data_dir}/{args.dataset_name}/tagid2movies.json", "r", encoding="utf-8") as f:
+    tag2items = json.load(f)
+tag2items = {int(k): v for k, v in tag2items.items()}
+
+num_users = int(max(x_train[:,0].max(), x_valid[:,0].max(), x_test[:,0].max())) + 1
+
+train_max_item = int(x_train[:,1].max())
+valid_max_item = int(x_valid[:,1].max())
+test_max_item = int(x_test[:,1].max())
+tag_max_item = max((max(v) for v in tag2items.values() if len(v) > 0), default=-1)
+
+num_items = max(train_max_item, valid_max_item, test_max_item, tag_max_item) + 1
 print(f"# user: {num_users}, # item: {num_items}")
+
 
 
 #%%
@@ -192,11 +203,6 @@ class ConceptMF(nn.Module):
         return out, user_embed, item_concept_sim
 
 
-
-
-with open(f"{args.data_dir}/{args.dataset_name}/tagid2movies.json", "r", encoding="utf-8") as f:
-    tag2items = json.load(f)
-tag2items = {int(k): v for k, v in tag2items.items()}
 
 model = ConceptMF(num_users, num_items, args.embedding_k, tag2items)
 model = model.to(args.device)
