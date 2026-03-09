@@ -169,16 +169,12 @@ class ConceptMF(nn.Module):
     def forward(self, samples, neg_item):
         anchor_user = samples[:, 0]
         pos_item = samples[:, 1]
-
         concept_vectors = self.get_concept_vectors()
-        user_embed = self.user_embedding(user_idx)
+        user_embed = self.user_embedding(anchor_user)
         pos_item_embed = self.item_embedding(pos_item)
         neg_item_embed = self.item_embedding(neg_item)
-
-        pos_concept_sim = item_embed @ concept_vectors.T
-        neg_concept_sim = item_embed @ concept_vectors.T
-        out = (user_embed * item_concept_sim).sum(dim=-1)
-
+        pos_concept_sim = pos_item_embed @ concept_vectors.T
+        neg_concept_sim = neg_item_embed @ concept_vectors.T
         return user_embed, pos_concept_sim, neg_concept_sim
 
 
@@ -205,7 +201,6 @@ tag2items = {int(k): v for k, v in tag2items.items()}
 model = ConceptMF(num_users, num_items, args.embedding_k, tag2items)
 model = model.to(args.device)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-loss_fcn = torch.nn.BCEWithLogitsLoss()
 
 
 #%%
@@ -220,8 +215,9 @@ for epoch in range(1, args.num_epochs+1):
         samples = torch.LongTensor(dataset.pos_samples[args.batch_size*idx : (idx+1)*args.batch_size]).to(args.device)
         neg_item = torch.LongTensor(dataset.neg_samples[args.batch_size*idx : (idx+1)*args.batch_size]).to(args.device)
 
-        pred, user_embed, item_concept = model(samples, neg_item)
-        loss = loss_fcn(pred, sub_y)
+        user_embed, pos_concept_sim, neg_concept_sim = model(samples, neg_item)
+        z = ((pos_concept_sim - neg_concept_sim) * user_embed).sum(dim=-1, keepdim=True)
+        loss = nn.functional.softplus(-z).mean()
 
         optimizer.zero_grad()
         loss.backward()
@@ -236,9 +232,8 @@ for epoch in range(1, args.num_epochs+1):
 
         model.eval()
         x_valid_tensor = torch.LongTensor(x_valid).to(args.device)
-        pred_, _, __ = model(x_valid_tensor)
+        pred_, _, __ = model.predict(x_valid_tensor)
         pred = pred_.flatten().cpu().detach().numpy()
-
 
         ndcg_res = ndcg_func(pred, x_valid, y_valid, args.top_k_list)
         ndcg_dict: dict = {}
@@ -264,7 +259,7 @@ for epoch in range(1, args.num_epochs+1):
 
         model.eval()
         x_test_tensor = torch.LongTensor(x_test).to(args.device)
-        pred_, _, __ = model(x_test_tensor)
+        pred_, _, __ = model.predict(x_test_tensor)
         pred = pred_.flatten().cpu().detach().numpy()
 
         ndcg_res = ndcg_func(pred, x_test, y_test, args.top_k_list)
