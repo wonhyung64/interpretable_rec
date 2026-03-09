@@ -38,11 +38,25 @@ class ConceptMF(nn.Module):
         user_idx = x[:, 0]
         item_idx = x[:, 1]
 
-        concept_vectors = self.get_concept_vectors()                # [T, K]
-        user_embed = self.user_embedding(user_idx)                  # [B, T]
-        item_embed = self.item_embedding(item_idx)                  # [B, K]
+        concept_vectors = self.get_concept_vectors()
+        user_embed = self.user_embedding(user_idx)
+        item_embed = self.item_embedding(item_idx)
 
-        item_concept_sim = item_embed @ concept_vectors.T           # [B, T]
-        out = (user_embed * item_concept_sim).sum(dim=-1)           # [B]
+        item_concept_sim = item_embed @ concept_vectors.T
+        out = (user_embed * item_concept_sim).sum(dim=-1)
+
+        return out, user_embed, item_concept_sim
+
+
+    def predict(self, x):
+        user_idx = x[:, 0]
+        item_idx = x[:, 1]
+
+        concept_vectors = self.get_concept_vectors()
+        user_embed = self.user_embedding(user_idx)
+        item_embed = self.item_embedding(item_idx)
+
+        item_concept_sim = item_embed @ concept_vectors.T
+        out = (user_embed * item_concept_sim).sum(dim=-1)
 
         return out, user_embed, item_concept_sim

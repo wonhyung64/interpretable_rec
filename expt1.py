@@ -72,18 +72,136 @@ x_test, y_test = x_test[:,:-2], x_test[:,-2]
 
 num_users = x_train[:,0].max() + 1
 num_items = x_train[:,1].max() + 1
-num_samples = len(y_train)
-print(f"# user: {num_users}, # item: {num_items}, # samples: {num_samples}")
+print(f"# user: {num_users}, # item: {num_items}")
+
+
+#%%
+
+import random
+import torch
+from collections import defaultdict
+from torch.utils.data import Dataset, DataLoader
+
+class PairwiseSampleDataset(Dataset):
+    def __init__(self, x, y):
+        """
+        x: (N, 2) -> [user_id, item_id]
+        y: (N,)   -> 1/0
+        """
+        self.user_pos = {}
+        self.user_neg = {}
+        self.pos_samples = []
+
+        user_pos = defaultdict(list)
+        user_neg = defaultdict(list)
+
+        for (u, i), label in zip(x, y):
+            if label == 1:
+                user_pos[int(u)].append(int(i))
+            else:
+                user_neg[int(u)].append(int(i))
+
+        # pairwise 가능한 user만 남김
+        valid_users = []
+        for u in user_pos:
+            if len(user_pos[u]) > 0 and len(user_neg[u]) > 0:
+                valid_users.append(u)
+
+        self.user_pos = {u: user_pos[u] for u in valid_users}
+        self.user_neg = {u: user_neg[u] for u in valid_users}
+
+        # positive anchor 목록
+        for u in valid_users:
+            for pos_item in self.user_pos[u]:
+                self.pos_samples.append((u, pos_item))
+
+    def neg_sampling(self):
+        self.neg_samples = []
+        for u, pos_item in self.pos_samples:
+            self.neg_samples.append(random.choice(self.user_neg[u]))
+
+    def __len__(self):
+        return len(self.pos_samples)
+
+dataset = PairwiseSampleDataset(x_train, y_train)
+
+num_samples = dataset.__len__()
+all_idxs = np.arange(num_samples)
+total_batch = num_samples // args.batch_size + 1
+
+#%%
+import torch
+import torch.nn as nn
+
+
+class ConceptMF(nn.Module):
+    def __init__(self, num_users:int, num_items:int, embedding_k:int, tag2items:dict):
+        super(ConceptMF, self).__init__()
+        self.num_users = num_users
+        self.num_items = num_items
+        self.embedding_k = embedding_k
+        sorted_tag_ids = sorted(tag2items.keys())
+        self.num_tags = len(sorted_tag_ids)
+        self.user_embedding = nn.Embedding(self.num_users, self.num_tags)
+        self.item_embedding = nn.Embedding(self.num_items, self.embedding_k)
+
+        rows, cols, vals = [], [], []
+        for new_tag_idx, tag_id in enumerate(sorted_tag_ids):
+            item_ids = tag2items[tag_id]
+            if len(item_ids) == 0:
+                continue
+            w = 1.0 / len(item_ids)   # 평균을 위한 weight
+            rows.extend([new_tag_idx] * len(item_ids))
+            cols.extend(item_ids)
+            vals.extend([w] * len(item_ids))
+        indices = torch.tensor([rows, cols], dtype=torch.long)
+        values = torch.tensor(vals, dtype=torch.float32)
+        concept_mat = torch.sparse_coo_tensor(
+            indices,
+            values,
+            size=(self.num_tags, self.num_items)
+        ).coalesce()
+        self.register_buffer("concept_mat", concept_mat) # 학습 파라미터가 아니라 고정 텐서
+
+    def get_concept_vectors(self): # [num_tags, num_items] @ [num_items, embedding_k] -> [num_tags, embedding_k]
+        return torch.sparse.mm(self.concept_mat, self.item_embedding.weight)
+
+    def forward(self, samples, neg_item):
+        anchor_user = samples[:, 0]
+        pos_item = samples[:, 1]
+
+        concept_vectors = self.get_concept_vectors()
+        user_embed = self.user_embedding(user_idx)
+        pos_item_embed = self.item_embedding(pos_item)
+        neg_item_embed = self.item_embedding(neg_item)
+
+        pos_concept_sim = item_embed @ concept_vectors.T
+        neg_concept_sim = item_embed @ concept_vectors.T
+        out = (user_embed * item_concept_sim).sum(dim=-1)
+
+        return user_embed, pos_concept_sim, neg_concept_sim
+
+
+    def predict(self, x):
+        user_idx = x[:, 0]
+        item_idx = x[:, 1]
+
+        concept_vectors = self.get_concept_vectors()
+        user_embed = self.user_embedding(user_idx)
+        item_embed = self.item_embedding(item_idx)
+
+        item_concept_sim = item_embed @ concept_vectors.T
+        out = (user_embed * item_concept_sim).sum(dim=-1)
+
+        return out, user_embed, item_concept_sim
+
+
+
 
 with open(f"{args.data_dir}/{args.dataset_name}/tagid2movies.json", "r", encoding="utf-8") as f:
     tag2items = json.load(f)
 tag2items = {int(k): v for k, v in tag2items.items()}
 
-all_idxs = np.arange(num_samples)
-total_batch = num_samples // args.batch_size + 1
-
-
-#%%
 model = ConceptMF(num_users, num_items, args.embedding_k, tag2items)
 model = model.to(args.device)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -92,16 +210,17 @@ loss_fcn = torch.nn.BCEWithLogitsLoss()
 
 #%%
 for epoch in range(1, args.num_epochs+1):
+    dataset.neg_sampling()
     np.random.shuffle(all_idxs)
     model.train()
     epoch_loss = 0.
 
     for idx in range(total_batch):
-        selected_idx = all_idxs[args.batch_size*idx : (idx+1)*args.batch_size]
-        sub_x = torch.LongTensor(x_train[selected_idx]).to(args.device)
-        sub_y = torch.FloatTensor(y_train[selected_idx]).to(args.device)
+        selected_idx = list(range(args.batch_size*idx, (idx+1)*args.batch_size))
+        samples = torch.LongTensor(dataset.pos_samples[args.batch_size*idx : (idx+1)*args.batch_size]).to(args.device)
+        neg_item = torch.LongTensor(dataset.neg_samples[args.batch_size*idx : (idx+1)*args.batch_size]).to(args.device)
 
-        pred, user_embed, item_concept = model(sub_x)
+        pred, user_embed, item_concept = model(samples, neg_item)
         loss = loss_fcn(pred, sub_y)
 
         optimizer.zero_grad()
