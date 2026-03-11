@@ -124,112 +124,134 @@ def worker_init_fn(worker_id):
     seed = (torch.initial_seed() + worker_id) % (2**32)
     ds.rng = np.random.default_rng(seed)
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 class ConceptMF(nn.Module):
     def __init__(self, num_users: int, num_items: int, embedding_k: int, tag2items: dict,
-                 sparse: bool = True):
-        super(ConceptMF, self).__init__()
+                 sparse: bool = True, normalize_centroid: bool = False):
+        super().__init__()
         self.num_users = num_users
         self.num_items = num_items
-        self.embedding_k = embedding_k
+        self.k = embedding_k
 
         sorted_tag_ids = sorted(tag2items.keys())
         self.num_tags = len(sorted_tag_ids)
+        self.normalize_centroid = normalize_centroid
 
-        # ✅ (변경 1) 유저는 concept 차원(=num_tags)로 저장하지 않고, k차원 latent로 저장
-        # 기존: self.user_embedding = nn.Embedding(self.num_users, self.num_tags)
-        self.user_embedding = nn.Embedding(self.num_users, self.embedding_k, sparse=sparse)
+        # ✅ user/item은 k차원 (작게)
+        self.user_embedding = nn.Embedding(num_users, self.k, sparse=sparse)
+        self.item_embedding = nn.Embedding(num_items, self.k, sparse=sparse)
 
-        # 아이템 임베딩은 그대로 k차원
-        self.item_embedding = nn.Embedding(self.num_items, self.embedding_k, sparse=sparse)
-
-        # tag -> items 로 만든 sparse concept_mat (tag-item incidence, 평균 weight)
+        # tag-item sparse matrix (centroid 계산할 때만 사용)
         rows, cols, vals = [], [], []
         for new_tag_idx, tag_id in enumerate(sorted_tag_ids):
             item_ids = tag2items[tag_id]
             if len(item_ids) == 0:
                 continue
-            w = 1.0 / len(item_ids)  # 평균을 위한 weight
+            w = 1.0 / len(item_ids)  # 평균 weight
             rows.extend([new_tag_idx] * len(item_ids))
             cols.extend(item_ids)
             vals.extend([w] * len(item_ids))
 
         indices = torch.tensor([rows, cols], dtype=torch.long)
-        values = torch.tensor(vals, dtype=torch.float32)
+        values  = torch.tensor(vals, dtype=torch.float32)
         concept_mat = torch.sparse_coo_tensor(
-            indices,
-            values,
-            size=(self.num_tags, self.num_items)
+            indices, values, size=(self.num_tags, self.num_items)
         ).coalesce()
-
-        # 고정 텐서(버퍼)
         self.register_buffer("concept_mat", concept_mat)
 
-    def get_concept_vectors(self):
+        # ✅ cache buffers (model.to(device) 시 같이 이동)
+        self.register_buffer("concept_vectors_cache", torch.empty(self.num_tags, self.k))
+        self.register_buffer("gram_cache", torch.empty(self.k, self.k))
+        self.cache_ready = False
+
+    @torch.no_grad()
+    def refresh_cache(self):
         """
-        [num_tags, num_items] @ [num_items, k] -> [num_tags, k]
-        tag vector = (그 tag에 속한 item embedding들의 평균)
+        C = concept_mat @ item_embedding.weight  (T,k)
+        G = C^T C  (k,k)
+        둘 다 no_grad로 갱신해서 매 step 역전파 비용 제거.
         """
-        return torch.sparse.mm(self.concept_mat, self.item_embedding.weight)
+        C = torch.sparse.mm(self.concept_mat, self.item_embedding.weight)  # (T,k)
+        if self.normalize_centroid:
+            C = F.normalize(C, dim=-1)
+
+        G = C.t().matmul(C)  # (k,k)
+
+        self.concept_vectors_cache.copy_(C)
+        self.gram_cache.copy_(G)
+        self.cache_ready = True
+
+    def forward_z(self, users, pos_items, neg_items):
+        """
+        빠른 z 계산:
+          z = u^T G (v_pos - v_neg)
+        return z: (B,1)
+        """
+        assert self.cache_ready, "call model.refresh_cache() first"
+
+        u = self.user_embedding(users)              # (B,k)
+        vp = self.item_embedding(pos_items)         # (B,k)
+        vn = self.item_embedding(neg_items)         # (B,k)
+
+        dv = vp - vn                                # (B,k)
+        uG = u.matmul(self.gram_cache)              # (B,k)
+        z = (uG * dv).sum(dim=-1, keepdim=True)     # (B,1)
+        return z
 
     def forward(self, samples, neg_item):
         """
-        samples: [B, 2] (user, pos_item)
-        neg_item: [B]
-        return:
-          user_concept_scores: [B, num_tags]   (해석가능: user의 각 concept 점수)
-          pos_concept_sim:     [B, num_tags]   (pos item의 각 concept 유사도)
-          neg_concept_sim:     [B, num_tags]
+        기존 학습 코드랑 맞추기 위해 forward에서 z만 반환하도록 제공.
         """
-        anchor_user = samples[:, 0]
-        pos_item = samples[:, 1]
+        users = samples[:, 0]
+        pos_items = samples[:, 1]
+        return self.forward_z(users, pos_items, neg_item)
 
-        # (1) tag vectors (num_tags, k)
-        concept_vectors = self.get_concept_vectors()  # [T, k]
-
-        # (2) user/item latent (B, k)
-        user_latent = self.user_embedding(anchor_user)     # [B, k]
-        pos_item_embed = self.item_embedding(pos_item)     # [B, k]
-        neg_item_embed = self.item_embedding(neg_item)     # [B, k]
-
-        # ✅ (변경 2) user의 concept 벡터(길이 T)는 "계산"으로 만든다: [B, T]
-        # user_concept_scores[c] = <user_latent, concept_vectors[c]>
-        user_concept_scores = user_latent @ concept_vectors.T  # [B, T]
-
-        # item -> concept 유사도는 기존 그대로: [B, T]
-        pos_concept_sim = pos_item_embed @ concept_vectors.T
-        neg_concept_sim = neg_item_embed @ concept_vectors.T
-
-        # 기존 코드가 user_embed를 리턴하던 자리에 "계산된 concept 점수"를 반환
-        return user_concept_scores, pos_concept_sim, neg_concept_sim
-
+    @torch.no_grad()
     def predict(self, x):
         """
-        x: [B, 2] (user, item)
-        out: [B]
+        out = u^T G v  (B,)
+        (빠른 스코어만)
         """
-        user_idx = x[:, 0]
-        item_idx = x[:, 1]
+        assert self.cache_ready, "call model.refresh_cache() first"
+        users = x[:, 0]
+        items = x[:, 1]
 
-        concept_vectors = self.get_concept_vectors()  # [T, k]
+        u = self.user_embedding(users)          # (B,k)
+        v = self.item_embedding(items)          # (B,k)
+        uG = u.matmul(self.gram_cache)          # (B,k)
+        out = (uG * v).sum(dim=-1)              # (B,)
+        return out
 
-        user_latent = self.user_embedding(user_idx)   # [B, k]
-        item_embed = self.item_embedding(item_idx)    # [B, k]
+    @torch.no_grad()
+    def explain_topk(self, user_id: int, item_id: int, topk: int = 20):
+        """
+        필요할 때만 (u,i) 1개에 대해 태그별 기여도 계산:
+          contrib_t = (u·c_t) * (v·c_t)
+        """
+        assert self.cache_ready, "call model.refresh_cache() first"
+        device = self.item_embedding.weight.device
 
-        # [B, T]
-        user_concept_scores = user_latent @ concept_vectors.T
-        item_concept_sim = item_embed @ concept_vectors.T
+        u = self.user_embedding.weight[user_id].to(device)  # (k,)
+        v = self.item_embedding.weight[item_id].to(device)  # (k,)
+        C = self.concept_vectors_cache                       # (T,k)
 
-        # 최종 점수: sum_c user_score[c] * item_sim[c]
-        out = (user_concept_scores * item_concept_sim).sum(dim=-1)
+        uc = C.matmul(u)    # (T,)
+        vc = C.matmul(v)    # (T,)
+        contrib = uc * vc   # (T,)
 
-        return out, user_concept_scores, item_concept_sim
-
-
+        vals, idx = torch.topk(contrib, topk)
+        return idx.cpu(), vals.cpu()
 #%%
 parser = argparse.ArgumentParser()
 parser.add_argument("--embedding-k", type=int, default=64)
 parser.add_argument("--lr", type=float, default=1e-4)
+parser.add_argument("--centroid-refresh-every", type=int, default=0,
+                    help="몇 step마다 centroid/gram cache를 갱신할지 (0이면 epoch마다 1번)")
+parser.add_argument("--centroid-normalize", action="store_true",
+                    help="centroid vector를 L2 normalize 할지 여부 (권장)")
 parser.add_argument("--weight-decay", type=float, default=1e-4)
 parser.add_argument("--batch-size", type=int, default=16384)
 parser.add_argument("--dataset-name", type=str, default="ml-32m")
@@ -309,46 +331,54 @@ total_batch = num_samples // args.batch_size + 1
 
 
 #%%
+model = ConceptMF(num_users, num_items, args.embedding_k, tag2items,
+                  sparse=False, normalize_centroid=args.centroid_normalize).to(args.device)
 
-
-model = ConceptMF(num_users, num_items, args.embedding_k, tag2items, sparse=False)
-model = model.to(args.device)
+# ✅ sparse=True면 SparseAdam 추천 (속도/메모리 유리)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-# train step
 
 #%%
-for epoch in range(1, args.num_epochs+1):
+global_step = 0
+
+for epoch in range(1, args.num_epochs + 1):
     model.train()
     epoch_loss = 0.
 
+    # epoch 시작 시 1회 갱신 (refresh_every==0일 때 특히 중요)
+    if (epoch == 1) or (args.centroid_refresh_every == 0):
+        model.refresh_cache()
+
     for i, (u, pos, neg) in enumerate(loader):
-        u   = u.to(args.device, non_blocking=True)
+        u = u.to(args.device, non_blocking=True)
         pos = pos.to(args.device, non_blocking=True)
         neg_item = neg.to(args.device, non_blocking=True)
 
+        # step 주기 갱신
+        if args.centroid_refresh_every > 0 and (global_step % args.centroid_refresh_every == 0):
+            model.refresh_cache()
+
         samples = torch.stack([u, pos], -1)
 
-        user_concept_scores, pos_concept_sim, neg_concept_sim = model(samples, neg_item)
-        
-        z = ((pos_concept_sim - neg_concept_sim) * user_concept_scores).sum(dim=-1, keepdim=True)
+        # ✅ z를 직접 받음: (B,1)
+        z = model(samples, neg_item)
+
         loss = nn.functional.softplus(-z).mean()
 
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         loss.backward()
         optimizer.step()
 
         epoch_loss += loss.item()
+        global_step += 1
 
     print(f"[Epoch {epoch:>4d} Train Loss] rec: {epoch_loss/total_batch:.4f}")
-
-#%%
 
     if epoch % args.evaluate_interval == 0:
 
         model.eval()
         x_valid_tensor = torch.LongTensor(x_valid).to(args.device)
-        pred_, _, __ = model.predict(x_valid_tensor)
+        pred_ = model.predict(x_valid_tensor)
         pred = pred_.flatten().cpu().detach().numpy()
 
         ndcg_res = ndcg_func(pred, x_valid, y_valid, args.top_k_list)
@@ -375,7 +405,7 @@ for epoch in range(1, args.num_epochs+1):
 
         model.eval()
         x_test_tensor = torch.LongTensor(x_test).to(args.device)
-        pred_, _, __ = model.predict(x_test_tensor)
+        pred_ = model.predict(x_test_tensor)
         pred = pred_.flatten().cpu().detach().numpy()
 
         ndcg_res = ndcg_func(pred, x_test, y_test, args.top_k_list)
