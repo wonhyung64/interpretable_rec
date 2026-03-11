@@ -44,7 +44,6 @@ class PairwiseSampleDataset(Dataset):
 
         # user id 압축: 0..M-1
         self.user_sample_dict = {user: sample for sample, user in enumerate(valid_user_list)}
-        # user_sample_dict = {user: sample for sample, user in enumerate(valid_user_list)}
         self.posuser_list = np.array(valid_user_list, dtype=np.int64)
 
         # pos_samples를 (user_idx, pos_item) 배열로 저장
@@ -52,14 +51,11 @@ class PairwiseSampleDataset(Dataset):
         positem_list = []
         for user in valid_user_list:
             sample = self.user_sample_dict[user]
-            # sample = user_sample_dict[user]
             for positem in user_positem_dict[user]:
                 possample_list.append(sample)
                 positem_list.append(positem)
         self.possample_arr = np.array(possample_list, dtype=np.int32)
         self.positem_arr = np.array(positem_list, dtype=np.int64)
-        # possample_arr = np.array(possample_list, dtype=np.int32)
-        # positem_arr = np.array(positem_list, dtype=np.int64)
 
         # neg를 flat array + offsets/lengths로 저장 (핵심)
         offsets = np.zeros(len(valid_user_list), dtype=np.int64)
@@ -86,14 +82,10 @@ class PairwiseSampleDataset(Dataset):
 
     def __getitem__(self, idx):
         possample = self.possample_arr[idx]
-        # possample = possample_arr[idx]
         positem = self.positem_arr[idx]
-        # positem = positem_arr[idx]
 
         off = self.neg_offsets[possample]
-        # off = neg_offsets[possample]
         L = self.neg_lengths[possample]
-        # L = neg_lengths[possample]
         j = off + self.rng.integers(L)   # 0..L-1
         negitem = self.flat_neg[j]
 
