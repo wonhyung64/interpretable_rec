@@ -369,6 +369,7 @@ for epoch in range(1, args.num_epochs + 1):
     if epoch % args.evaluate_interval == 0:
 
         model.eval()
+        model.refresh_cache()
         x_valid_tensor = torch.LongTensor(x_valid).to(args.device)
         pred_ = model.predict(x_valid_tensor)
         pred = pred_.flatten().cpu().detach().numpy()
