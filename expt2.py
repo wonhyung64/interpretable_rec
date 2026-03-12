@@ -240,7 +240,7 @@ class ConceptMF(nn.Module):
 parser = argparse.ArgumentParser()
 parser.add_argument("--embedding-k", type=int, default=64)
 parser.add_argument("--lr", type=float, default=1e-4)
-parser.add_argument("--centroid-refresh-every", type=int, default=0,
+parser.add_argument("--centroid-refresh-every", type=int, default=200,
                     help="몇 step마다 centroid/gram cache를 갱신할지 (0이면 epoch마다 1번)")
 parser.add_argument("--centroid-normalize", action="store_true",
                     help="centroid vector를 L2 normalize 할지 여부 (권장)")
